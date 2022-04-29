@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/manfromth3m0oN/csgo/model"
 	log "github.com/sirupsen/logrus"
@@ -25,8 +27,8 @@ func createRoom(c *gin.Context) {
 		return
 	}
 
-	users := make([]model.User, 0)
-	users = append(users, model.User{Name: req.UName, Addr: c.Request.RemoteAddr})
+	users := make([]string, 0)
+	users = append(users, req.UName)
 	log.Info("Added user")
 
 	newRoom := model.Room{
@@ -35,16 +37,26 @@ func createRoom(c *gin.Context) {
 		Playlist: []string{"https://storage.googleapis.com/downloads.webmproject.org/media/video/webmproject.org/big_buck_bunny_trailer_480p_logo.webm"},
 		Index:    0,
 	}
-	rooms[req.Name] = newRoom
+	rooms[req.Name] = &newRoom
 	log.Info("Added room")
 
-	c.JSON(200, gin.H{"room": newRoom.Name})
+	go newRoom.Run()
+
+	c.JSON(http.StatusOK, gin.H{"room": newRoom.Name})
 	return
 }
 
 func handleRoom(c *gin.Context) {
 	roomName := c.Param("room")
+	var joinReq model.RoomJoinReq
+	err := c.BindJSON(&joinReq)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
 	room := rooms[roomName]
+	room.Mutex.Lock()
+	room.Join(joinReq.Username)
+	room.Mutex.Unlock()
 	ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		panic(err)
@@ -57,11 +69,20 @@ func handleRoom(c *gin.Context) {
 
 	ws.WriteJSON(msg)
 	for {
-		mt, message, err := ws.ReadMessage()
+		outMsg := <-room.OutChan
+		ws.WriteJSON(outMsg)
+
+		var inMsg model.Event
+		err := ws.ReadJSON(&msg)
+		if err != nil {
+			log.Warn("Read err ", err)
+		}
+		log.Info(msg)
+
+		room.InChan <- inMsg
 		if err != nil {
 			log.Println("read:", err)
 			break
 		}
-		log.Info(mt, string(message))
 	}
 }

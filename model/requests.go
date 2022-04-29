@@ -6,3 +6,7 @@ type CreateRoomReq struct {
 	BoardSn  string `json:"board_sn"`
 	UName    string `json:"username"`
 }
+
+type RoomJoinReq struct {
+	Username string `json:"username"`
+}

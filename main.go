@@ -8,13 +8,13 @@ import (
 	"github.com/manfromth3m0oN/csgo/model"
 )
 
-var rooms map[string]model.Room
+var rooms map[string]*model.Room
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
 func main() {
-	rooms = make(map[string]model.Room)
+	rooms = make(map[string]*model.Room)
 	r := gin.Default()
 	r.Use(CORSMiddleware())
 	r.GET("/ping", ping)
