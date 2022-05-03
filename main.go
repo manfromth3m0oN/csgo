@@ -34,5 +34,5 @@ func main() {
 	r.GET("/ping", ping)
 	r.GET("/room/:room", handleRoom)
 	r.POST("/create-room", createRoom)
-	r.Run(":3000")
+	r.Run("0.0.0.0:3000")
 }

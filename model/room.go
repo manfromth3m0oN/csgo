@@ -85,6 +85,15 @@ func (r *Room) Run() {
 				break
 			case Leave:
 				r.Users.Delete(msg.Data)
+				var counter int
+				r.Users.Range(func(key, value interface{}) bool {
+					counter++
+					return true
+				})
+				if counter == 0 {
+					sugar.Warn("No users left in room, deleting")
+					return
+				}
 				break
 			case SkipB:
 				r.Index--
